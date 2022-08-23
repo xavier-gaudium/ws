@@ -195,7 +195,7 @@ func ListenToWsChannel() {
 				broadcastToAll(response)
 			}
 
-			// Desconceta o usuario
+			// Desconecta o usuário
 		case "left":
 			response.Action = "list_users"
 			delete(clients, e.Conn)
