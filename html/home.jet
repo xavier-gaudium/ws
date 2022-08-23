@@ -10,49 +10,65 @@
           integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <style>
         .chatbox{
+            min-height: 150px;
+            max-height: 350px;
             outline: 1px solid silver;
-            min-height: 160px;
             padding: 0.5em;
+            overflow: scroll;
         }
+        a { color: inherit; }
 
     </style>
 </head>
-<body>
-<div class="container">
+<body style="
+background-color: #ACA5C675;
+width: 100%;
+height: 100%;
+overflow: hidden;">
+<div class="container" >
     <div class ="row">
         <div class = "col">
-            <h1 class = "mt-3">EVA-01</h1>
+            <h1 class = "mt-3">Projeto Graduação</h1>
+            <div id = "status" class ="mt-3 float-end">
+            </div>
         </div>
     </div>
     <div class="row">
         <div class="col-md-8">
-            <h3>Chat</h3>
-
             <div class="form-group">
-                <label for="username">Usuário</label>
-                <input type="text" name="username" id="username" class="form-control" autocomplete="off" >
+                <h5 for="username" style="display: inline-block">Usuário: </h5><h5 for="username" id = "name" style="display: inline-block"></h5>
+                <input type="text" name="username" id="username" class="form-control" autocomplete="off" hidden = true >
             </div>
-            <div class="form-group" id="form">
-                <label for="message">Mensagem</label>
-                <input type="text" name="message" id="message" class="form-control" autocomplete="off" >
+            <hr>
+            <div class="form-group">
+                <strong><label  id = "dest">Destinatário</label><label id = "dest_name" style="padding-left: 5px"></label></strong>
+                <label  id = "dest_id" hidden = true></label>
             </div>
 
-            <hr>
-            <a href="javascript:void(0);"class="btn btn-outline-secondary" id="sendBtn">Send Message</a>
+
+            <!--
+                        <a href="javascript:void(0);"class="btn btn-outline-secondary" id="connBtn">Conectar</a>
+            -->
+
+                        <!--  <a href="javascript:void(0);"class="btn btn-outline-secondary" id="sendBtn">Enviar Mensagem Para todos</a>
+                        -->
 
             <input type="hidden" name="action" id="action">
 
-            <div id = "status" class ="mt-2 float-end">
+
+
+
+            <div id = "output" class = "chatbox mt-3" style="word-wrap: break-word"  >
+
             </div>
-
-
-            <div id = "output" class = "chatbox mt-3">
-
+            <div class="form-group" id="form" style="display: inline-block">
+                <label for="message">Mensagem</label>
+                <input type="text" name="message" id="message" class="form-control" autocomplete="off" style="min-width:40vw;">
             </div>
+            <div style="display: inline-block"><a href="javascript:void(0);"class="btn btn-outline-secondary" id="destBtn" style="display: inline-block">Enviar Mensagem </a></div>
         </div>
         <div class = "col-md-4">
             <h3>Usuários Online</h3>
-
             <ul id="usuarios_on"></ul>
         </div>
     </div>
@@ -61,12 +77,19 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 <script src="../static/reconnecting-websocket.min.js"></script>
+
 <script>
+    let nome =null;
     let socket = null;
     let o = document.getElementById("output");
-    let userField = document.getElementById("username");
     let messageField = document.getElementById("message");
+    let destField = document.getElementById("dest_id");
+    const offline = `<span class ="badge bg-danger">Não conectado</span>`
+    const online = `<span class ="badge bg-success">Conectado</span>`
+    let statusDiv = document.getElementById("status");
 
+    statusDiv.innerHTML = offline;
+    // ao fechar a aba desconecta
     window.onbeforeunload = function (){
         console.log("Saindo");
         let jsonDate = {};
@@ -75,93 +98,156 @@
 
     }
     //esperar toda a "página" carregar para realizar o upgrade
-    document.addEventListener("DOMContentLoaded",function () {
-        socket = new ReconnectingWebSocket("ws://192.168.2.132:8083/ws",null,{debug:true,reconnectInterval: 5000});
-
-        const offline =`<span class ="badge bg-danger">Não conectado</span>`
-        const online =`<span class ="badge bg-success">Conectado</span>`
-        let statusDiv = document.getElementById("status");
-
-        socket.onopen = () => {
-            console.log("Conectado com sucesso");
-            statusDiv.innerHTML = online;
-        }
-        socket.onclose = () => {
-            console.log("Conexao fechada");
-            statusDiv.innerHTML = offline;
-        }
-        socket.onerror = () => {
-            console.log("Ocorreu um erro");
-            statusDiv.innerHTML = offline;
-        }
-        socket.onmessage = msg => {
-            //console.log(msg);
-            //let j = JSON.parse(msg.data);
-            //console.log(j);
-
-            let data = JSON.parse(msg.data);
-            console.log("Action is",data.action);
-            switch (data.action){
-                case "list_users":
-                    let ul = document.getElementById("usuarios_on");
-                    while(ul.firstChild) ul.removeChild(ul.firstChild);
-
-                    if(data.connected_users.length > 0){
-                        data.connected_users.forEach(function (item){
-                            let li = document.createElement("li");
-                            li.appendChild(document.createTextNode(item));
-                            ul.appendChild(li);
-                        })
-                    }
-                    break;
-                case "broadcast":
-                    o.innerHTML += (data.message + " <br>");
-                    console.log(o.innerHTML);
+    document.addEventListener("DOMContentLoaded", function () {
+     let id = document.getElementById("teste").textContent;
+        if (socket === null){
+            socket = new ReconnectingWebSocket("ws://192.168.2.132:8099/ws", null, {
+                debug: true,
+                reconnectInterval: 100
+            });
+            socket.onopen = () => {
+                console.log("Conectado com sucesso");
+                obtem_nome();
+                eu();
+                statusDiv.innerHTML = online;
             }
-        }
+            socket.onclose = () => {
+                console.log("Conexao fechada");
+                statusDiv.innerHTML = offline;
+            }
+            socket.onerror = () => {
+                console.log("Ocorreu um erro");
+                statusDiv.innerHTML = offline;
+            }
+            socket.onmessage = msg => {
 
-        userField.addEventListener("change",function (){
-            let jsonData = {};
-            jsonData["action"] = "username";
-            jsonData["username"] = this.value;
-            jsonData["type"] = "web";
-            console.log(JSON.stringify(jsonData))
-            socket.send(JSON.stringify(jsonData));
-        })
-        messageField.addEventListener("keydown",function (event){
-            if(event.code === "Enter"){
-                if(!socket){
-                    console.log("Sem conexao");
-                    return false
+                let data = JSON.parse(msg.data);
+                console.log("Action is", data.action);
+                switch (data.action) {
+                    case "list_users":
+                        let ul = document.getElementById("usuarios_on");
+                        while (ul.firstChild) ul.removeChild(ul.firstChild);
+                        if (data.connected_users.length > 0) {
+                            data.connected_users.forEach(function (item) {
+                                let ids = item.toString()
+                                let id_split = ids.split(":")
+                                console.log(id_split)
+                                let li = document.createElement("li");
+                                const anchor = document.createElement('a');
+                                let teste = 'javascript:muda_dest(\''+id_split[0]+'\',\''+id_split[1]+'\')'
+                                anchor.href = teste;
+                                texto = id_split[1] + "  Id:" + id_split[0]
+                                if (id == id_split[0]){
+                                    texto = "Eu";
+                                    nome = id_split[1]
+                                   anchor.href = "#void";
+                                }
+                                anchor.innerText = texto;
+                                li.appendChild(anchor);
+                                ul.appendChild(li);
+                            })
+                        }
+                        break;
+                    case "broadcast":
+                        o.innerHTML += (data.message );
+                        console.log(o.innerHTML);
+                        break;
+                    case "unicast":
+                        if (data.remetente == document.getElementById("dest_id").textContent) {
+                            o.innerHTML += (data.message);
+                        }
+                        o.scrollTop = o.scrollHeight;
+                        break;
+                    case "duplo":
+                        statusDiv.innerHTML = offline;
+                        socket.close();
+                        socket = null;
+                        alert(data.message);
+                       open("/login","_self")
+
+                        break;
+                    case "eu":
+                        document.getElementById("name").textContent = data.message;
+                        console.log(data)
+                        break;
+                    case "chat":
+                        console.log(data)
+                        if (data.messages_slice.length > 0) {
+                            data.messages_slice.forEach(function (item) {
+                                o.innerHTML += (item);
+                            })
+                            o.scrollTop = o.scrollHeight;
+
+                        }
+                        break;
                 }
-                if ((userField.value === "") || (messageField.value === "")){
-                    alert("Preencha o usuario e a mensagem");
-                    return false
-                }else{
-                    sendMessage()
-                }
-                event.preventDefault();
-                event.stopPropagation();
             }
-        })
 
-        document.getElementById("sendBtn").addEventListener("click",function (){
-            if ((userField.value === "") || (messageField.value === "")){
-                alert("Preencha o usuario e a mensagem");
-                return false
-            }else{
-                sendMessage()
+            function eu(){
+                let jsonData = {};
+                jsonData["action"] = "eu";
+                jsonData["id"] = id;
+                socket.send(JSON.stringify(jsonData));
             }
-        })
+            function obtem_nome(){
+                    let jsonData = {};
+                    jsonData["action"] = "conexao";
+                    jsonData["id"] = id;
+                    jsonData["username"] = nome;
+                    jsonData["plataforma"] = "W";
+                    socket.send(JSON.stringify(jsonData));
+                }
+            document.getElementById("destBtn").addEventListener("click", function () {
+                if ( (messageField.value === "") || (document.getElementById("dest_id").textContent === "")) {
+                    alert("o destinatario ou a mensagem estam vazios");
+                    return false
+                } else {
+                    mail()
+                }
+            })
+        }
+
     })
 
-    function sendMessage(){
+    function muda_dest(id,nome){
+        o.innerHTML  = ""
+        let jsonData = {};
+        jsonData["Action"] = "chat"
+        jsonData["id"] = document.getElementById("teste").textContent
+        jsonData["username"] = nome;
+        jsonData["receiver"] = id;
+        console.log(jsonData);
+        document.getElementById("dest").textContent = "Conversa com ";
+        document.getElementById("dest_name").textContent = "  "+nome;
+        document.getElementById("dest_id").textContent = id;
+        socket.send(JSON.stringify(jsonData))
+    }
+
+    function sendMessage() {
         let jsonData = {};
         jsonData["Action"] = "broadcast"
-        jsonData["username"] = userField.value;
+        jsonData["id"] = document.getElementById("teste").textContent
+        jsonData["username"] = nome;
+        console.log(nome);
         jsonData["message"] = messageField.value;
         socket.send(JSON.stringify(jsonData))
         messageField.value = "";
     }
+
+    function mail() {
+            let jsonData = {};
+            jsonData["Action"] = "unicast"
+            jsonData["id"] = document.getElementById("teste").textContent
+            jsonData["username"] = nome;
+        console.log("NOME:"+nome)
+            jsonData["message"] = messageField.value;
+            console.log(document.getElementById("dest_id").textContent);
+            jsonData["receiver"] = document.getElementById("dest_id").textContent;
+            socket.send(JSON.stringify(jsonData))
+            o.innerHTML += ("<strong>"+nome+"</strong>: "+messageField.value+"<br>");
+            messageField.value = "";
+            o.scrollTop = o.scrollHeight;
+        }
 </script>
+
 </html>

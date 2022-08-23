@@ -9,7 +9,9 @@ import (
 func routes() http.Handler {
 	mux := pat.New()
 
-	mux.Get("/", http.HandlerFunc(handlers.Home))
+	mux.Get("/login", http.HandlerFunc(handlers.Login))
+	mux.Post("/", http.HandlerFunc(handlers.Valida_login))
+	mux.Post("/", http.HandlerFunc(handlers.Home))
 	mux.Get("/ws", http.HandlerFunc(handlers.WsEndpoint))
 
 	fileServer := http.FileServer(http.Dir(("./static/")))
